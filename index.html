@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ALUM — Business Case</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --volcanic: #6B3A2A;
+    --charcoal: #1C1C1C;
+    --cream: #F5F0E8;
+    --eucalyptus: #4A6741;
+    --brass: #B8956A;
+    --warm-gray: #9B9286;
+    --off-white: #FAF8F5;
+    --deep-earth: #3D2B1F;
+    --stone: #C4B9A8;
+    --mist: #E8E4DD;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { font-family: 'DM Sans', sans-serif; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; color: var(--charcoal); overflow-x: hidden; }
+  
+  /* Fade-in animation */
+  .fade-in { opacity: 0; transform: translateY(28px); transition: opacity 0.9s ease, transform 0.9s ease; }
+  .fade-in.visible { opacity: 1; transform: translateY(0); }
+  .fade-in.d1 { transition-delay: 0.12s; }
+  .fade-in.d2 { transition-delay: 0.24s; }
+  .fade-in.d3 { transition-delay: 0.36s; }
+  .fade-in.d4 { transition-delay: 0.48s; }
+  .fade-in.d5 { transition-delay: 0.6s; }
+  .fade-in.d6 { transition-delay: 0.72s; }
+  .fade-in.d7 { transition-delay: 0.84s; }
+  
+  /* Sections */
+  .section { padding: 100px 40px; position: relative; overflow: hidden; }
+  .section-inner { max-width: 720px; margin: 0 auto; }
+  .section-wide { max-width: 860px; margin: 0 auto; }
+  
+  /* Typography */
+  .serif { font-family: 'Playfair Display', Georgia, serif; }
+  .label { font-size: 10px; letter-spacing: 0.4em; text-transform: uppercase; color: var(--brass); margin-bottom: 12px; font-weight: 400; }
+  .title { font-family: 'Playfair Display', Georgia, serif; font-size: clamp(26px, 3.5vw, 34px); font-weight: 400; line-height: 1.25; margin-bottom: 24px; }
+  .body-text { font-size: 13.5px; line-height: 1.85; color: var(--warm-gray); font-weight: 300; margin-bottom: 16px; }
+  
+  /* Dot pattern overlay */
+  .dot-overlay { position: absolute; inset: 0; opacity: 0.05; background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.3) 1px, transparent 0); background-size: 44px 44px; pointer-events: none; }
+  
+  /* Divider */
+  .divider { width: 50px; height: 1px; background: var(--brass); margin: 28px auto; }
+  
+  /* Hero */
+  .hero { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; background: linear-gradient(160deg, var(--charcoal) 0%, var(--deep-earth) 50%, var(--volcanic) 100%); text-align: center; padding: 60px 40px; position: relative; }
+  .hero-label { font-size: 10px; letter-spacing: 0.5em; text-transform: uppercase; color: var(--brass); margin-bottom: 40px; }
+  .hero-title { font-family: 'Playfair Display', Georgia, serif; font-size: clamp(64px, 12vw, 130px); color: var(--cream); font-weight: 400; letter-spacing: 0.08em; line-height: 0.9; }
+  .hero-tagline { font-size: clamp(12px, 1.6vw, 15px); color: var(--stone); letter-spacing: 0.3em; text-transform: uppercase; font-weight: 300; }
+  .hero-sub { font-size: 11px; color: var(--warm-gray); letter-spacing: 0.2em; text-transform: uppercase; line-height: 2; }
+  .hero-line { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); width: 1px; height: 40px; background: linear-gradient(to bottom, var(--brass), transparent); }
+  
+  /* Stats */
+  .stats-row { display: flex; gap: 48px; justify-content: center; flex-wrap: wrap; }
+  .stat { text-align: center; }
+  .stat-num { font-family: 'Playfair Display', Georgia, serif; font-size: 28px; margin-bottom: 4px; }
+  .stat-label { font-size: 9px; letter-spacing: 0.25em; text-transform: uppercase; }
+  
+  /* Data rows */
+  .data-box { background: var(--off-white); padding: 28px; border: 1px solid var(--mist); margin-bottom: 28px; }
+  .data-row { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1px solid var(--mist); padding: 10px 0; }
+  .data-row:last-child { border-bottom: none; }
+  .data-key { font-size: 11px; font-weight: 500; color: var(--charcoal); letter-spacing: 0.02em; }
+  .data-val { font-size: 12px; font-weight: 300; color: var(--warm-gray); text-align: right; }
+  
+  /* P&L table */
+  .pl-grid { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; padding: 10px 0; border-bottom: 1px solid var(--mist); }
+  .pl-grid:last-child { border-bottom: none; }
+  .pl-grid.header span { font-size: 9px; font-weight: 500; letter-spacing: 0.15em; text-transform: uppercase; color: var(--brass); }
+  .pl-grid span { font-size: 12px; font-weight: 300; color: var(--charcoal); }
+  .pl-grid span:first-child { font-weight: 400; }
+  .pl-grid span:not(:first-child) { text-align: right; }
+  
+  /* Quote */
+  .quote-block { background: var(--cream); padding: 28px; border-left: 3px solid var(--brass); margin-bottom: 28px; }
+  .quote-text { font-family: 'Playfair Display', Georgia, serif; font-size: 15px; color: var(--charcoal); line-height: 1.65; }
+  
+  /* Pillar cards */
+  .pillar-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .pillar-card { background: var(--cream); padding: 24px; border-bottom: 2px solid var(--brass); }
+  .pillar-title { font-family: 'Playfair Display', Georgia, serif; font-size: 18px; color: var(--charcoal); margin-bottom: 2px; }
+  .pillar-sub { font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--brass); margin-bottom: 10px; }
+  .pillar-desc { font-size: 12px; color: var(--warm-gray); font-weight: 300; line-height: 1.7; }
+  
+  /* Checks */
+  .check-item { display: flex; align-items: baseline; gap: 10px; margin-bottom: 6px; }
+  .check-icon { color: var(--eucalyptus); font-size: 13px; flex-shrink: 0; }
+  .check-text { font-size: 12.5px; color: var(--charcoal); font-weight: 300; }
+  
+  /* Phases */
+  .phase-row { display: flex; gap: 16px; align-items: flex-start; margin-bottom: 20px; }
+  .phase-num { font-family: 'Playfair Display', Georgia, serif; font-size: 24px; color: var(--brass); opacity: 0.6; min-width: 40px; }
+  .phase-title { font-size: 13px; font-weight: 500; margin-bottom: 2px; }
+  .phase-time { font-size: 11px; font-weight: 300; color: var(--warm-gray); }
+  .phase-desc { font-size: 12px; font-weight: 300; line-height: 1.65; }
+  
+  /* Risks */
+  .risk-card { background: var(--cream); padding: 20px; margin-bottom: 12px; border-left: 3px solid var(--volcanic); }
+  .risk-title { font-size: 12.5px; font-weight: 500; color: var(--charcoal); margin-bottom: 5px; }
+  .risk-desc { font-size: 12px; font-weight: 300; color: var(--warm-gray); line-height: 1.7; }
+  
+  /* Fundraising cards */
+  .fund-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 32px; }
+  .fund-card { background: rgba(255,255,255,0.04); padding: 24px; text-align: center; border-top: 2px solid var(--brass); }
+  .fund-card.gate { border-top-color: var(--volcanic); }
+  .fund-label { font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--brass); margin-bottom: 8px; }
+  .fund-amount { font-family: 'Playfair Display', Georgia, serif; font-size: 26px; color: var(--cream); margin-bottom: 8px; }
+  .fund-detail { font-size: 11px; color: var(--warm-gray); font-weight: 300; line-height: 1.5; white-space: pre-line; }
+  
+  /* Cap table */
+  .cap-box { background: rgba(255,255,255,0.03); padding: 20px; border: 1px solid rgba(255,255,255,0.06); }
+  .cap-row { display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.06); padding: 9px 0; }
+  .cap-row:last-child { border-bottom: none; }
+  .cap-row.header span { font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--brass); font-weight: 500; }
+  .cap-row span { font-size: 12px; font-weight: 300; color: var(--stone); }
+  
+  /* Gates */
+  .gate-row { display: flex; border-bottom: 1px solid var(--mist); padding: 16px 0; }
+  .gate-row:last-child { border-bottom: none; }
+  .gate-label-col { min-width: 100px; flex-shrink: 0; }
+  .gate-name { font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--brass); font-weight: 500; margin-bottom: 2px; }
+  .gate-name.critical { color: var(--volcanic); }
+  .gate-date { font-size: 10px; color: var(--warm-gray); }
+  .gate-milestone { font-family: 'Playfair Display', Georgia, serif; font-size: 16px; color: var(--charcoal); margin-bottom: 4px; }
+  .gate-desc { font-size: 12px; color: var(--warm-gray); font-weight: 300; }
+  
+  /* Target box */
+  .target-box { background: var(--off-white); padding: 28px; border: 1px solid var(--mist); margin-top: 28px; }
+  .target-label { font-family: 'Playfair Display', Georgia, serif; font-size: 18px; color: var(--charcoal); margin-bottom: 4px; }
+  .target-date { font-family: 'Playfair Display', Georgia, serif; font-size: 32px; color: var(--volcanic); margin-bottom: 8px; }
+  .target-note { font-size: 12px; color: var(--warm-gray); font-weight: 300; }
+  
+  /* Link button */
+  .link-btn { display: inline-flex; align-items: center; gap: 8px; font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--brass); text-decoration: none; border-bottom: 1px solid var(--brass); padding-bottom: 4px; margin-top: 16px; transition: opacity 0.3s; }
+  .link-btn:hover { opacity: 0.7; }
+  
+  /* Closing */
+  .closing { min-height: 80vh; display: flex; flex-direction: column; justify-content: center; align-items: center; background: linear-gradient(170deg, var(--charcoal) 0%, var(--deep-earth) 60%, var(--volcanic) 100%); text-align: center; padding: 80px 40px; position: relative; }
+  .closing-title { font-family: 'Playfair Display', Georgia, serif; font-size: clamp(52px, 9vw, 84px); font-weight: 400; color: var(--cream); letter-spacing: 0.06em; line-height: 0.95; margin-bottom: 24px; }
+  .closing-tagline { font-family: 'Playfair Display', Georgia, serif; font-size: 20px; color: var(--stone); font-style: italic; margin-bottom: 48px; }
+  .closing-address { font-size: 10px; color: var(--warm-gray); letter-spacing: 0.2em; text-transform: uppercase; line-height: 2.2; margin-bottom: 48px; }
+  .closing-links { display: flex; gap: 24px; justify-content: center; flex-wrap: wrap; margin-bottom: 60px; }
+  .closing-links a { font-size: 10px; color: var(--brass); letter-spacing: 0.1em; text-decoration: none; border-bottom: 1px solid rgba(184,149,106,0.3); padding-bottom: 2px; transition: opacity 0.3s; }
+  .closing-links a:hover { opacity: 0.7; }
+  .closing-conf { font-size: 9px; color: var(--warm-gray); letter-spacing: 0.2em; text-transform: uppercase; opacity: 0.4; }
+  
+  /* Responsive */
+  @media (max-width: 768px) {
+    .section { padding: 64px 24px; }
+    .pillar-grid { grid-template-columns: 1fr; }
+    .fund-grid { grid-template-columns: 1fr; }
+    .stats-row { gap: 32px; }
+    .pl-grid { font-size: 11px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="dot-overlay"></div>
+  <p class="fade-in hero-label" style="position:relative;z-index:1;">Business Case · Confidential · March 2026</p>
+  <h1 class="fade-in d2 hero-title" style="position:relative;z-index:1;margin-bottom:24px;">ALUM</h1>
+  <div class="fade-in d3" style="position:relative;z-index:1;"><div class="divider"></div></div>
+  <p class="fade-in d4 hero-tagline" style="position:relative;z-index:1;margin-bottom:64px;">For the few who play the long game</p>
+  <p class="fade-in d5 hero-sub" style="position:relative;z-index:1;margin-bottom:48px;">Australia's First Biodynamic Longevity Country Club<br>Lyonbank Falls · Glenlyon, Victoria</p>
+  <div class="fade-in d6 stats-row" style="position:relative;z-index:1;">
+    <div class="stat"><div class="stat-num" style="color:var(--cream)">$12.7M</div><div class="stat-label" style="color:var(--warm-gray)">Total Capex</div></div>
+    <div class="stat"><div class="stat-num" style="color:var(--cream)">$3.76M</div><div class="stat-label" style="color:var(--warm-gray)">Year 1 Revenue</div></div>
+    <div class="stat"><div class="stat-num" style="color:var(--cream)">100</div><div class="stat-label" style="color:var(--warm-gray)">Members Max</div></div>
+    <div class="stat"><div class="stat-num" style="color:var(--cream)">28ha</div><div class="stat-label" style="color:var(--warm-gray)">Estate</div></div>
+  </div>
+  <div class="hero-line"></div>
+</div>
+
+<!-- AT A GLANCE -->
+<div class="section" style="background:var(--cream)">
+  <div class="section-inner">
+    <p class="fade-in label">Overview</p>
+    <h2 class="fade-in d1 title">At a Glance</h2>
+    <div class="fade-in d2 data-box">
+      <div class="data-row"><span class="data-key">Concept</span><span class="data-val">Private longevity country club on 28ha biodynamic estate</span></div>
+      <div class="data-row"><span class="data-key">Location</span><span class="data-val">Glenlyon, VIC — 8 mins Daylesford, 90 mins Melbourne</span></div>
+      <div class="data-row"><span class="data-key">Property Price</span><span class="data-val">AUD $4.0–$4.5M</span></div>
+      <div class="data-row"><span class="data-key">Total Capex</span><span class="data-val">~$12.7M</span></div>
+      <div class="data-row"><span class="data-key">Membership</span><span class="data-val">$50K joining + $10K/year</span></div>
+      <div class="data-row"><span class="data-key">Members</span><span class="data-val">50 founding · 100 maximum</span></div>
+      <div class="data-row"><span class="data-key">Accommodation</span><span class="data-val">10 architect-designed passive home eco cabins</span></div>
+      <div class="data-row"><span class="data-key">Alcohol Policy</span><span class="data-val">Fully alcohol-free</span></div>
+      <div class="data-row"><span class="data-key">Clinical Approach</span><span class="data-val">Full medical tourism grade</span></div>
+      <div class="data-row"><span class="data-key">Year 1 Revenue</span><span class="data-val">$3.76M</span></div>
+      <div class="data-row"><span class="data-key">Steady-State EBITDA</span><span class="data-val">~$700K/year (20% margin)</span></div>
+      <div class="data-row"><span class="data-key">Target Opening</span><span class="data-val">~Q2 2028</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- STEP 1: MARKET RESEARCH -->
+<div class="section" style="background:var(--charcoal)">
+  <div class="section-inner">
+    <p class="fade-in label">Step 1</p>
+    <h2 class="fade-in d1 title" style="color:var(--cream)">Market Research &amp; Background</h2>
+    <p class="fade-in d2 body-text" style="color:var(--stone)">The Australian wellness tourism sector is valued at approximately AUD $14.7 billion (2025) and is projected to grow at ~10% CAGR through 2035. Australia ranks in the top 10 globally for HNWI populations, with over 42,000 individuals holding US$10M+ in assets and approximately 4,800 UHNWIs. The Daylesford/Hepburn Springs region is already recognised as Victoria's wellness capital — but there is no private members club or longevity-focused country retreat in the region.</p>
+    <p class="fade-in d2 body-text" style="color:var(--stone)">The reference models map into a compelling hybrid: Long Lane (alcohol-free wellness hotel + members club), Saint Haven (urban wellness clubs with 15,000-person waitlists), Hampton (curated peer networking for founders/CEOs), and Lon Retreat (farm-based luxury retreat with farm-to-plate dining). No one in Australia has combined all four pillars into a rural, biodynamic, longevity-focused country club. That's the white space.</p>
+    <p class="fade-in d2 body-text" style="color:var(--stone)">The target property — Lyonbank Falls — is a 28-hectare country estate with an architecturally transformed main house, 16 hectares of productive agricultural land on rich red volcanic soil, a spectacular waterfall, and existing infrastructure. Hepburn Shire Council adopted the Rural Hepburn Strategy in September 2024 explicitly supporting appropriate rural tourism. The Victorian Government released "Growing Victoria's Wellness Tourism Sector" guidance in August 2025.</p>
+    <div class="fade-in d3 stats-row" style="margin-top:32px">
+      <div class="stat"><div class="stat-num" style="color:var(--cream)">$14.7B</div><div class="stat-label" style="color:var(--warm-gray)">AU Wellness Tourism</div></div>
+      <div class="stat"><div class="stat-num" style="color:var(--cream)">42,789</div><div class="stat-label" style="color:var(--warm-gray)">HNWI (US$10M+)</div></div>
+      <div class="stat"><div class="stat-num" style="color:var(--cream)">10%+</div><div class="stat-label" style="color:var(--warm-gray)">Market CAGR</div></div>
+      <div class="stat"><div class="stat-num" style="color:var(--cream)">+228%</div><div class="stat-label" style="color:var(--warm-gray)">Wellness Bookings YoY</div></div>
+    </div>
+    <a class="fade-in d4 link-btn" href="https://www.notion.so/328ab58b328d81d4b161cbe98783031d" target="_blank">Full Report →</a>
+  </div>
+</div>
+
+<!-- STEP 2: VALUE PROPOSITION -->
+<div class="section" style="background:var(--off-white)">
+  <div class="section-wide">
+    <p class="fade-in label">Step 2</p>
+    <h2 class="fade-in d1 title">Value Proposition &amp; Positioning</h2>
+    <div class="fade-in d2 quote-block">
+      <p class="quote-text">ALUM is a private, longevity country club on a 28-hectare biodynamic estate built on rich volcanic soil. It is an exclusive retreat where the few who play the long game come to replenish, rejuvenate, prepare and perform. An epicentre for wellbeing offering an on-site longevity clinic, biodynamic and local farm-to-plate produce and network of high-impact individuals.</p>
+    </div>
+    <p class="fade-in d3 label" style="margin-top:28px">The Four Pillars</p>
+    <div class="fade-in d3 pillar-grid">
+      <div class="pillar-card"><p class="pillar-title">Land</p><p class="pillar-sub">The Biodynamic Estate</p><p class="pillar-desc">28 hectares of working biodynamic farmland. Everything flows from the land.</p></div>
+      <div class="pillar-card"><p class="pillar-title">Longevity</p><p class="pillar-sub">The Clinical Programme</p><p class="pillar-desc">Hyperbaric oxygen, peptide therapies, comprehensive biomarkers, precision nutrition.</p></div>
+      <div class="pillar-card"><p class="pillar-title">Community</p><p class="pillar-sub">The Curated Membership</p><p class="pillar-desc">100 members selected for values alignment. Quarterly gatherings. Private portal.</p></div>
+      <div class="pillar-card"><p class="pillar-title">Nourishment</p><p class="pillar-sub">The Alcohol-Free Table</p><p class="pillar-desc">Every meal precision-crafted from biodynamic produce, tailored to health data.</p></div>
+    </div>
+    <p class="fade-in d4 label" style="margin-top:28px">The "Only" Test</p>
+    <div class="fade-in d4">
+      <div class="check-item"><span class="check-icon">✓</span><span class="check-text">Only biodynamic private country club in Australia</span></div>
+      <div class="check-item"><span class="check-icon">✓</span><span class="check-text">Only alcohol-free private members club in Australia</span></div>
+      <div class="check-item"><span class="check-icon">✓</span><span class="check-text">Only longevity-focused country club with clinical-grade diagnostics in a rural setting</span></div>
+      <div class="check-item"><span class="check-icon">✓</span><span class="check-text">Only private club limited to 100 members on a working agricultural estate</span></div>
+      <div class="check-item"><span class="check-icon">✓</span><span class="check-text">Only private wellness membership in the Daylesford/Hepburn corridor</span></div>
+    </div>
+    <a class="fade-in d5 link-btn" href="https://www.notion.so/328ab58b328d815c90b2e2e0d0734b18" target="_blank">Full Report →</a>
+  </div>
+</div>
+
+<!-- STEP 3: FINANCIAL MODEL -->
+<div class="section" style="background:var(--cream)">
+  <div class="section-inner">
+    <p class="fade-in label">Step 3</p>
+    <h2 class="fade-in d1 title">Business Model &amp; Financial Model</h2>
+    <p class="fade-in d2 label">Capital Expenditure · ~$12.7M</p>
+    <div class="fade-in d2 data-box">
+      <div class="data-row"><span class="data-key" style="font-weight:300">Property acquisition</span><span class="data-val" style="font-weight:500;color:var(--charcoal)">$4.51M</span></div>
+      <div class="data-row"><span class="data-key" style="font-weight:300">10 passive home eco cabins</span><span class="data-val" style="font-weight:500;color:var(--charcoal)">$4.75M</span></div>
+      <div class="data-row"><span class="data-key" style="font-weight:300">Clubhouse renovation</span><span class="data-val" style="font-weight:500;color:var(--charcoal)">$650K</span></div>
+      <div class="data-row"><span class="data-key" style="font-weight:300">ALUM Clinic</span><span class="data-val" style="font-weight:500;color:var(--charcoal)">$950K</span></div>
+      <div class="data-row"><span class="data-key" style="font-weight:300">Estate &amp; Farm</span><span class="data-val" style="font-weight:500;color:var(--charcoal)">$400K</span></div>
+      <div class="data-row"><span class="data-key" style="font-weight:300">Pre-opening costs</span><span class="data-val" style="font-weight:500;color:var(--charcoal)">$700K</span></div>
+      <div class="data-row"><span class="data-key" style="font-weight:300">Contingency (10%)</span><span class="data-val" style="font-weight:500;color:var(--charcoal)">$745K</span></div>
+    </div>
+    <p class="fade-in d3 label">5-Year P&amp;L Summary</p>
+    <div class="fade-in d3 data-box">
+      <div class="pl-grid header"><span></span><span>Year 1</span><span>Year 3</span><span>Year 5</span></div>
+      <div class="pl-grid"><span>Revenue</span><span>$3.76M</span><span>$3.72M</span><span>$3.47M</span></div>
+      <div class="pl-grid"><span>EBITDA</span><span>$1.58M</span><span>$1.18M</span><span>$696K</span></div>
+      <div class="pl-grid"><span>Margin</span><span>42%</span><span>32%</span><span>20%</span></div>
+    </div>
+    <p class="fade-in d4 body-text">Years 1-3 elevated by joining fee inflows. Years 4-5 represent steady-state recurring revenue. The recurring business (excluding joining fees) breaks even in Year 3. Breakeven occupancy is just 38%. Five-year cumulative revenue: $17.8M. Five-year cumulative EBITDA: $5.3M.</p>
+    <a class="fade-in d4 link-btn" href="https://www.notion.so/328ab58b328d81b9a314f4cd4dab2b80" target="_blank">Full Report →</a>
+  </div>
+</div>
+
+<!-- STEP 4: GO-TO-MARKET -->
+<div class="section" style="background:var(--deep-earth)">
+  <div class="section-inner">
+    <p class="fade-in label">Step 4</p>
+    <h2 class="fade-in d1 title" style="color:var(--cream)">Go-to-Market Strategy</h2>
+    <p class="fade-in d2 body-text" style="color:var(--stone)">ALUM is built the way every great private club has been built: one conversation at a time. Relationship before transaction. Story before sale. Scarcity is real, not manufactured. Fifty founding members acquired for $255K total marketing spend. No paid advertising.</p>
+    <div class="fade-in d3" style="margin-top:20px">
+      <div class="phase-row"><span class="phase-num">01</span><div><p class="phase-title" style="color:var(--cream)">Inner Circle <span class="phase-time">· Month 0-3</span></p><p class="phase-desc" style="color:var(--stone)">3-4 private dinners in Melbourne. Property visits. 10-15 verbal commitments.</p></div></div>
+      <div class="phase-row"><span class="phase-num">02</span><div><p class="phase-title" style="color:var(--cream)">The Build Story <span class="phase-time">· Month 3-12</span></p><p class="phase-desc" style="color:var(--stone)">Document the journey on Instagram + LinkedIn. Boutique PR. 15,000+ followers.</p></div></div>
+      <div class="phase-row"><span class="phase-num">03</span><div><p class="phase-title" style="color:var(--cream)">Founding Members <span class="phase-time">· Month 6-18</span></p><p class="phase-desc" style="color:var(--stone)">Recruit 50 founding members via network, dinners, visits, referrals, inbound.</p></div></div>
+      <div class="phase-row"><span class="phase-num">04</span><div><p class="phase-title" style="color:var(--cream)">Pre-Opening <span class="phase-time">· Month 18-20</span></p><p class="phase-desc" style="color:var(--stone)">Preview Weekend. Media Launch. 3-4 week soft opening.</p></div></div>
+      <div class="phase-row"><span class="phase-num">05</span><div><p class="phase-title" style="color:var(--cream)">Opening &amp; Beyond <span class="phase-time">· Month 21+</span></p><p class="phase-desc" style="color:var(--stone)">Second tranche (51-100). Content shifts to "living the reality."</p></div></div>
+    </div>
+    <div class="fade-in d4 stats-row" style="margin-top:36px">
+      <div class="stat"><div class="stat-num" style="color:var(--cream)">$255K</div><div class="stat-label" style="color:var(--warm-gray)">Total GTM Budget</div></div>
+      <div class="stat"><div class="stat-num" style="color:var(--cream)">$5,100</div><div class="stat-label" style="color:var(--warm-gray)">Cost Per Member</div></div>
+      <div class="stat"><div class="stat-num" style="color:var(--cream)">$0</div><div class="stat-label" style="color:var(--warm-gray)">Paid Advertising</div></div>
+    </div>
+    <a class="fade-in d5 link-btn" href="https://www.notion.so/328ab58b328d818a8495ca447410bbe5" target="_blank">Full Report →</a>
+  </div>
+</div>
+
+<!-- STEP 5: RISKS -->
+<div class="section" style="background:var(--off-white)">
+  <div class="section-inner">
+    <p class="fade-in label">Step 5</p>
+    <h2 class="fade-in d1 title">Risks &amp; Mitigations</h2>
+    <p class="fade-in d2 body-text">22 risks identified across 6 categories. None rated Critical. The phased fundraising structure is itself the primary risk mitigation — only $1.2M is deployed before the critical council approval gate.</p>
+    <p class="fade-in d3 label">Top 4 Risks (Scored 6/9)</p>
+    <div class="fade-in d3">
+      <div class="risk-card"><p class="risk-title">Council approval refused</p><p class="risk-desc">Phased fundraising caps pre-approval risk at $1.2M. Agri-tourism framing. Pre-application council engagement. Experienced local planner.</p></div>
+      <div class="risk-card"><p class="risk-title">Planning delays</p><p class="risk-desc">Budget for 12-month timeline. Parallel non-approval work: biodynamic conversion, brand, content, member recruitment.</p></div>
+      <div class="risk-card"><p class="risk-title">Cash flow timing mismatch</p><p class="risk-desc">Phased raises sized for full development. $2.5M founding member fees collected during build. Debt facility as buffer.</p></div>
+      <div class="risk-card"><p class="risk-title">Medical regulatory requirements</p><p class="risk-desc">Specialist health law firm from inception. Early Medical Director appointment. Phased clinical rollout — launch with lower-risk modalities.</p></div>
+    </div>
+    <a class="fade-in d4 link-btn" href="https://www.notion.so/328ab58b328d816fa7b2d6912b883ccc" target="_blank">Full Report →</a>
+  </div>
+</div>
+
+<!-- STEP 6: FUNDRAISING -->
+<div class="section" style="background:var(--charcoal)">
+  <div class="section-inner">
+    <p class="fade-in label">Step 6</p>
+    <h2 class="fade-in d1 title" style="color:var(--cream)">Fundraising Strategy</h2>
+    <p class="fade-in d2 body-text" style="color:var(--stone)">100% externally funded. Capital deployment follows risk resolution — the majority of capital (~$9M) is only deployed after the critical council approval gate is cleared.</p>
+    <div class="fade-in d3 fund-grid">
+      <div class="fund-card"><p class="fund-label">Phase 1 · Seed</p><p class="fund-amount">$1.2M</p><p class="fund-detail">4-6 HNWI angels
+SAFE notes, $5M cap</p></div>
+      <div class="fund-card gate"><p class="fund-label">Go/No-Go Gate</p><p class="fund-amount">—</p><p class="fund-detail">Council approval
+No capital deployed</p></div>
+      <div class="fund-card"><p class="fund-label">Phase 3 · Main</p><p class="fund-amount">$8-9M</p><p class="fund-detail">Equity + Debt +
+Member fees + Crowdfund</p></div>
+    </div>
+    <p class="fade-in d4 label">Cap Table (Post All Raises)</p>
+    <div class="fade-in d4 cap-box">
+      <div class="cap-row header"><span>Shareholder</span><span>Equity</span></div>
+      <div class="cap-row"><span>Founder (sweat equity, 3-yr vesting)</span><span>~35-40%</span></div>
+      <div class="cap-row"><span>Phase 1 angels</span><span>~15-18%</span></div>
+      <div class="cap-row"><span>Phase 3 private equity</span><span>~35-40%</span></div>
+      <div class="cap-row"><span>Employee option pool</span><span>~5%</span></div>
+    </div>
+    <a class="fade-in d5 link-btn" href="https://www.notion.so/328ab58b328d811bbdfbdf95b8810710" target="_blank">Full Report →</a>
+  </div>
+</div>
+
+<!-- STEP 7: PROJECT PLAN -->
+<div class="section" style="background:var(--cream)">
+  <div class="section-inner">
+    <p class="fade-in label">Step 7</p>
+    <h2 class="fade-in d1 title">Project Plan &amp; Go/No-Go Gates</h2>
+    <p class="fade-in d2 body-text">20-24 months. Six phases. Four formal Go/No-Go gates. Property settlement at 12 months from deposit. Council approval must precede settlement. Opening 9 months after approval.</p>
+    <div class="fade-in d3">
+      <div class="gate-row"><div class="gate-label-col"><p class="gate-name">Gate 1</p><p class="gate-date">August 2026</p></div><div><p class="gate-milestone">Seed Close &amp; Deposit</p><p class="gate-desc">$1.2M raised · Property deposit paid · 12-month settlement clock starts</p></div></div>
+      <div class="gate-row"><div class="gate-label-col"><p class="gate-name critical">Gate 2</p><p class="gate-date">By August 2027</p></div><div><p class="gate-milestone">Council Approval</p><p class="gate-desc">Planning permit granted · Must precede settlement deadline · 30+ qualified EOIs</p></div></div>
+      <div class="gate-row"><div class="gate-label-col"><p class="gate-name">Gate 3</p><p class="gate-date">Aug-Sep 2027</p></div><div><p class="gate-milestone">Capital Close &amp; Settlement</p><p class="gate-desc">$7.5M+ committed · Property settled · Builder appointed · 35+ founding members</p></div></div>
+      <div class="gate-row"><div class="gate-label-col"><p class="gate-name">Gate 4</p><p class="gate-date">April 2028</p></div><div><p class="gate-milestone">Opening Readiness</p><p class="gate-desc">All facilities operational · Team in place · 50 members confirmed · Compliance complete</p></div></div>
+    </div>
+    <div class="fade-in d4 target-box">
+      <p class="target-label">Target Opening</p>
+      <p class="target-date">May 2028</p>
+      <p class="target-note">9 months after council approval · If project commences Q2 2026</p>
+    </div>
+    <a class="fade-in d5 link-btn" href="https://www.notion.so/328ab58b328d81d88873c82d09ff6f32" target="_blank">Full Report →</a>
+  </div>
+</div>
+
+<!-- CLOSING -->
+<div class="closing">
+  <div class="dot-overlay"></div>
+  <div class="fade-in" style="position:relative;z-index:1">
+    <h2 class="closing-title">ALUM</h2>
+    <div class="divider"></div>
+    <p class="closing-tagline">For the few who play the long game.</p>
+  </div>
+  <div class="fade-in d3" style="position:relative;z-index:1">
+    <p class="closing-address">Lyonbank Falls · 259 Back Glenlyon Road, Glenlyon VIC 3461<br>28 Hectares · Hepburn Shire · Victoria, Australia</p>
+    <div class="closing-links">
+      <a href="https://www.notion.so/328ab58b328d81d4b161cbe98783031d" target="_blank">Market Research</a>
+      <a href="https://www.notion.so/328ab58b328d815c90b2e2e0d0734b18" target="_blank">Value Proposition</a>
+      <a href="https://www.notion.so/328ab58b328d81b9a314f4cd4dab2b80" target="_blank">Financial Model</a>
+      <a href="https://www.notion.so/328ab58b328d818a8495ca447410bbe5" target="_blank">Go-to-Market</a>
+      <a href="https://www.notion.so/328ab58b328d816fa7b2d6912b883ccc" target="_blank">Risks</a>
+      <a href="https://www.notion.so/328ab58b328d811bbdfbdf95b8810710" target="_blank">Fundraising</a>
+      <a href="https://www.notion.so/328ab58b328d81d88873c82d09ff6f32" target="_blank">Project Plan</a>
+    </div>
+  </div>
+  <p class="fade-in d5 closing-conf" style="position:relative;z-index:1">Confidential · March 2026</p>
+</div>
+
+<script>
+// Intersection Observer for fade-in animations
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible');
+    }
+  });
+}, { threshold: 0.1 });
+
+document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+</script>
+</body>
+</html>
