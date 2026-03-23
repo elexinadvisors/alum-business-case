@@ -29,6 +29,56 @@
     -webkit-font-smoothing: antialiased;
   }
 
+  /* ─── NAV ─── */
+  .nav {
+    background: var(--charcoal);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 32px;
+    height: 48px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    border-bottom: 1px solid rgba(184,149,106,0.15);
+  }
+
+  .nav-brand {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 16px;
+    color: var(--cream);
+    letter-spacing: 0.1em;
+    text-decoration: none;
+    font-weight: 400;
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 4px;
+  }
+
+  .nav-link {
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    text-decoration: none;
+    color: var(--stone);
+    padding: 6px 14px;
+    border-radius: 2px;
+    transition: all 0.2s ease;
+  }
+
+  .nav-link:hover {
+    color: var(--cream);
+    background: rgba(255,255,255,0.06);
+  }
+
+  .nav-link.active {
+    color: var(--cream);
+    background: rgba(184,149,106,0.18);
+    border: 1px solid rgba(184,149,106,0.25);
+  }
+
   /* ─── HERO ─── */
   .hero {
     background: linear-gradient(160deg, var(--charcoal) 0%, var(--deepEarth) 50%, var(--volcanic) 100%);
@@ -279,6 +329,15 @@
 </style>
 </head>
 <body>
+
+  <nav class="nav">
+    <a href="index.html" class="nav-brand">ALUM</a>
+    <div class="nav-links">
+      <a href="index.html" class="nav-link active">Dashboard</a>
+      <a href="business-case.html" class="nav-link">Business Case</a>
+      <a href="financial-model.html" class="nav-link">Financial Model</a>
+    </div>
+  </nav>
 
   <div class="hero">
     <div class="hero-label">Confidential · March 2026</div>

@@ -5,15 +5,32 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ALUM · Financial Scenario Model</title>
 <style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap');
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: #F5F0E8; }
-  #root { min-height: 100vh; }
+  body { background: #F5F0E8; font-family: 'DM Sans', sans-serif; }
+  #root { min-height: calc(100vh - 48px); }
+  .nav { background: #1C1C1C; display: flex; align-items: center; justify-content: space-between; padding: 0 32px; height: 48px; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid rgba(184,149,106,0.15); }
+  .nav-brand { font-family: 'Playfair Display', Georgia, serif; font-size: 16px; color: #F5F0E8; letter-spacing: 0.1em; text-decoration: none; font-weight: 400; }
+  .nav-links { display: flex; gap: 4px; }
+  .nav-link { font-family: 'DM Sans', sans-serif; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; text-decoration: none; color: #C4B9A8; padding: 6px 14px; border-radius: 2px; transition: all 0.2s ease; }
+  .nav-link:hover { color: #F5F0E8; background: rgba(255,255,255,0.06); }
+  .nav-link.active { color: #F5F0E8; background: rgba(184,149,106,0.18); border: 1px solid rgba(184,149,106,0.25); }
+  .back-btn { font-family: 'DM Sans', sans-serif; display: inline-flex; align-items: center; gap: 6px; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; text-decoration: none; color: #C4B9A8; padding: 6px 14px; border-radius: 2px; transition: all 0.2s ease; }
+  .back-btn:hover { color: #F5F0E8; background: rgba(255,255,255,0.06); }
 </style>
 <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
 </head>
 <body>
+<nav class="nav">
+  <a href="index.html" class="back-btn">← Dashboard</a>
+  <div class="nav-links">
+    <a href="index.html" class="nav-link">Dashboard</a>
+    <a href="business-case.html" class="nav-link">Business Case</a>
+    <a href="financial-model.html" class="nav-link active">Financial Model</a>
+  </div>
+</nav>
 <div id="root"></div>
 <script type="text/babel">
 const { useState, useMemo, useEffect, useRef } = React;
