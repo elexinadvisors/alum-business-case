@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ALUM · Financial Scenario Model</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #F5F0E8; }
+  #root { min-height: 100vh; }
+</style>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useMemo, useEffect, useRef } = React;
+
+/* ─── DESIGN TOKENS ─── */
+const C = {
+  volcanic:"#6B3A2A", charcoal:"#1C1C1C", cream:"#F5F0E8", brass:"#B8956A",
+  warmGray:"#9B9286", offWhite:"#FAF8F5", deepEarth:"#3D2B1F", stone:"#C4B9A8",
+  mist:"#E8E4DD", euc:"#4A6741", red:"#B5403F", green:"#3D7A4A", amber:"#C4933B",
+};
+
+/* ─── FORMATTERS ─── */
+const f$ = n => { if(n==null||isNaN(n)) return "—"; const a=Math.abs(n); const s=n<0?"-":""; if(a>=1e6) return `${s}$${(a/1e6).toFixed(2)}M`; if(a>=1e3) return `${s}$${Math.round(a/1e3)}K`; return `${s}$${Math.round(a)}`; };
+const fN = n => n==null?"—":Math.round(n).toLocaleString();
+const fP = n => n==null?"—":`${Math.round(n*100)}%`;
+const fPd = (n,d=1) => n==null?"—":`${(n*100).toFixed(d)}%`;
+
+/* ─── UI PRIMITIVES ─── */
+const Sl = ({label,value,onChange,min,max,step=1,fmt="num",sfx="",desc}) => (
+  <div style={{marginBottom:desc?14:11}}>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:1}}>
+      <span style={{fontSize:10.5,color:C.charcoal,fontWeight:400}}>{label}</span>
+      <span style={{fontSize:11,color:C.charcoal,fontWeight:600,fontVariantNumeric:"tabular-nums"}}>
+        {fmt==="$"?f$(value):fmt==="%"?fP(value):`${value}${sfx}`}
+      </span>
+    </div>
+    {desc && <p style={{fontSize:9,color:C.warmGray,margin:"0 0 3px",lineHeight:1.3}}>{desc}</p>}
+    <input type="range" min={min} max={max} step={step} value={value}
+      onChange={e=>onChange(parseFloat(e.target.value))}
+      style={{width:"100%",accentColor:C.brass,height:3,cursor:"pointer"}} />
+  </div>
+);
+
+const Toggle = ({label,value,onChange,desc}) => (
+  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8,padding:"4px 0"}}>
+    <div style={{flex:1}}>
+      <span style={{fontSize:10.5,color:C.charcoal,fontWeight:400}}>{label}</span>
+      {desc && <p style={{fontSize:9,color:C.warmGray,margin:"2px 0 0"}}>{desc}</p>}
+    </div>
+    <div onClick={()=>onChange(!value)} style={{width:36,height:20,borderRadius:10,background:value?C.euc:C.stone,cursor:"pointer",position:"relative",transition:"background 0.2s",flexShrink:0,marginLeft:12}}>
+      <div style={{width:16,height:16,borderRadius:8,background:"#fff",position:"absolute",top:2,left:value?18:2,transition:"left 0.15s",boxShadow:"0 1px 3px rgba(0,0,0,0.15)"}} />
+    </div>
+  </div>
+);
+
+const Hdr = ({children}) => (
+  <p style={{fontSize:9,letterSpacing:"0.25em",textTransform:"uppercase",color:C.brass,margin:"18px 0 8px",fontWeight:600,borderBottom:`1px solid ${C.mist}`,paddingBottom:5}}>{children}</p>
+);
+
+const Box = ({children,style={}}) => (
+  <div style={{background:C.offWhite,padding:"16px 18px",borderRadius:3,marginBottom:12,...style}}>{children}</div>
+);
+
+const Stat = ({label,value,sub,color=C.charcoal}) => (
+  <div style={{background:C.offWhite,padding:"12px 14px",borderBottom:`2px solid ${C.brass}`,flex:1,minWidth:120}}>
+    <p style={{fontSize:8,letterSpacing:"0.18em",textTransform:"uppercase",color:C.brass,margin:"0 0 2px"}}>{label}</p>
+    <p style={{fontFamily:"Georgia,serif",fontSize:19,color,margin:"0 0 1px",fontVariantNumeric:"tabular-nums"}}>{value}</p>
+    {sub && <p style={{fontSize:9,color:C.warmGray,margin:0}}>{sub}</p>}
+  </div>
+);
+
+const Row = ({cells,header=false,bold=false,accent=false,indent=false,border=false}) => (
+  <div style={{display:"grid",gridTemplateColumns:`${indent?"20px ":""}2.2fr ${cells.slice(indent?2:1).map(()=>"1fr").join(" ")}`,borderBottom:border?`2px solid ${C.brass}`:`1px solid ${accent?"transparent":C.mist}`,padding:header?"5px 0":"5px 0",background:accent?"rgba(184,149,106,0.06)":"transparent"}}>
+    {indent && <span />}
+    {(indent?cells.slice(1):cells).map((c,i)=>(
+      <span key={i} style={{fontSize:header?8:11,fontWeight:header?600:bold?600:300,letterSpacing:header?"0.1em":"0",textTransform:header?"uppercase":"none",color:header?C.brass:bold?C.charcoal:indent?C.warmGray:C.charcoal,textAlign:(indent?i>0:i>0)?"right":"left",fontVariantNumeric:"tabular-nums"}}>{c}</span>
+    ))}
+  </div>
+);
+
+const SecTitle = ({children,sub}) => (
+  <div style={{marginBottom:16}}>
+    <p style={{fontFamily:"Georgia,serif",fontSize:20,color:C.charcoal,margin:"0 0 2px"}}>{children}</p>
+    {sub && <p style={{fontSize:11,color:C.warmGray,margin:0}}>{sub}</p>}
+  </div>
+);
+
+/* ═══════════════════════════════════════════════════════════════
+   MAIN COMPONENT
+   ═══════════════════════════════════════════════════════════════ */
+
+const DEFAULTS = {
+  page:0, sJoin:10000, bJoin:25000, pJoin:50000, sAnn:3000, bAnn:7500, pAnn:15000,
+  maxMem:300, yr1Rec:50, yrNRec:75, sPct:0.40, bPct:0.40, attrit:0.05, upSB:0.08, upBP:0.05,
+  y1Starter:true, y1Base:false, y1Premium:false,
+  numCabins:10, cabinCost:475000, memWD:500, memWE:700,
+  discWD:800, discWE:1100, discPerMonth:4, bbWD:450, bbWE:650,
+  yr1Occ:0.35, yr2Occ:0.35, yr5Occ:0.60,
+  extraNightPrice:650, extraNightPct:0.25, extraNightsPerMem:2,
+  eventTicket:150, eventsPerYear:12, plus1Price:80, plus1Pct:0.25,
+  peptidePrice:500, nadPrice:800, ivPrice:350, interventionPct:0.20, interventionsPerMem:2,
+  chefDinner:3000, chefDinnerPct:0.08,
+  gmSal:200000, chefSal:110000, groundSal:80000, cmSal:120000, gpRate:200, nurseRate:150, annualRaise:0.04,
+  softwareBudget:5000, insuranceBudget:60000, maintenanceBudget:80000, marketingBudget:80000, fbCostPerNight:65,
+};
+
+const STORAGE_KEY = "alum-scenario-v2";
+
+function usePersistedState() {
+  const [state, setStateRaw] = useState(DEFAULTS);
+  const [loaded, setLoaded] = useState(false);
+  const saveTimer = useRef(null);
+
+  // Load from storage on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const result = (() => { const v = localStorage.getItem(STORAGE_KEY); return v ? { value: v } : null; })();
+        if (result && result.value) {
+          const saved = JSON.parse(result.value);
+          setStateRaw(prev => ({ ...prev, ...saved }));
+        }
+      } catch (e) {
+        // No saved data or storage unavailable — use defaults
+      }
+      setLoaded(true);
+    })();
+  }, []);
+
+  // Auto-save to storage on every change (debounced 400ms)
+  const stateRef = useRef(state);
+  stateRef.current = state;
+  useEffect(() => {
+    if (!loaded) return;
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(async () => {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(stateRef.current));
+      } catch (e) {
+        // Storage write failed — silent
+      }
+    }, 400);
+    return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
+  }, [state, loaded]);
+
+  const set = (key, val) => setStateRaw(prev => ({ ...prev, [key]: val }));
+  const resetAll = async () => {
+    setStateRaw(DEFAULTS);
+    try { localStorage.removeItem(STORAGE_KEY); } catch(e) {}
+  };
+
+  return { s: state, set, resetAll, loaded };
+}
+
+function ALUMModel() {
+  const { s, set, resetAll, loaded } = usePersistedState();
+
+  // Convenience aliases
+  const page = s.page, setPage = v => set("page", v);
+  const sJoin = s.sJoin, setSJoin = v => set("sJoin", v);
+  const bJoin = s.bJoin, setBJoin = v => set("bJoin", v);
+  const pJoin = s.pJoin, setPJoin = v => set("pJoin", v);
+  const sAnn = s.sAnn, setSAnn = v => set("sAnn", v);
+  const bAnn = s.bAnn, setBAnn = v => set("bAnn", v);
+  const pAnn = s.pAnn, setPAnn = v => set("pAnn", v);
+  const maxMem = s.maxMem, setMaxMem = v => set("maxMem", v);
+  const yr1Rec = s.yr1Rec, setYr1Rec = v => set("yr1Rec", v);
+  const yrNRec = s.yrNRec, setYrNRec = v => set("yrNRec", v);
+  const sPct = s.sPct, setSPct = v => set("sPct", v);
+  const bPct = s.bPct, setBPct = v => set("bPct", v);
+  const attrit = s.attrit, setAttrit = v => set("attrit", v);
+  const upSB = s.upSB, setUpSB = v => set("upSB", v);
+  const upBP = s.upBP, setUpBP = v => set("upBP", v);
+  const y1Starter = s.y1Starter, setY1Starter = v => set("y1Starter", v);
+  const y1Base = s.y1Base, setY1Base = v => set("y1Base", v);
+  const y1Premium = s.y1Premium, setY1Premium = v => set("y1Premium", v);
+  const numCabins = s.numCabins, setNumCabins = v => set("numCabins", v);
+  const cabinCost = s.cabinCost, setCabinCost = v => set("cabinCost", v);
+  const memWD = s.memWD, setMemWD = v => set("memWD", v);
+  const memWE = s.memWE, setMemWE = v => set("memWE", v);
+  const discWD = s.discWD, setDiscWD = v => set("discWD", v);
+  const discWE = s.discWE, setDiscWE = v => set("discWE", v);
+  const discPerMonth = s.discPerMonth, setDiscPerMonth = v => set("discPerMonth", v);
+  const bbWD = s.bbWD, setBbWD = v => set("bbWD", v);
+  const bbWE = s.bbWE, setBbWE = v => set("bbWE", v);
+  const yr1Occ = s.yr1Occ, setYr1Occ = v => set("yr1Occ", v);
+  const yr2Occ = s.yr2Occ, setYr2Occ = v => set("yr2Occ", v);
+  const yr5Occ = s.yr5Occ, setYr5Occ = v => set("yr5Occ", v);
+  const extraNightPrice = s.extraNightPrice, setExtraNightPrice = v => set("extraNightPrice", v);
+  const extraNightPct = s.extraNightPct, setExtraNightPct = v => set("extraNightPct", v);
+  const extraNightsPerMem = s.extraNightsPerMem, setExtraNightsPerMem = v => set("extraNightsPerMem", v);
+  const eventTicket = s.eventTicket, setEventTicket = v => set("eventTicket", v);
+  const eventsPerYear = s.eventsPerYear, setEventsPerYear = v => set("eventsPerYear", v);
+  const plus1Price = s.plus1Price, setPlus1Price = v => set("plus1Price", v);
+  const plus1Pct = s.plus1Pct, setPlus1Pct = v => set("plus1Pct", v);
+  const peptidePrice = s.peptidePrice, setPeptidePrice = v => set("peptidePrice", v);
+  const nadPrice = s.nadPrice, setNadPrice = v => set("nadPrice", v);
+  const ivPrice = s.ivPrice, setIvPrice = v => set("ivPrice", v);
+  const interventionPct = s.interventionPct, setInterventionPct = v => set("interventionPct", v);
+  const interventionsPerMem = s.interventionsPerMem, setInterventionsPerMem = v => set("interventionsPerMem", v);
+  const chefDinner = s.chefDinner, setChefDinner = v => set("chefDinner", v);
+  const chefDinnerPct = s.chefDinnerPct, setChefDinnerPct = v => set("chefDinnerPct", v);
+  const gmSal = s.gmSal, setGmSal = v => set("gmSal", v);
+  const chefSal = s.chefSal, setChefSal = v => set("chefSal", v);
+  const groundSal = s.groundSal, setGroundSal = v => set("groundSal", v);
+  const cmSal = s.cmSal, setCmSal = v => set("cmSal", v);
+  const gpRate = s.gpRate, setGpRate = v => set("gpRate", v);
+  const nurseRate = s.nurseRate, setNurseRate = v => set("nurseRate", v);
+  const annualRaise = s.annualRaise, setAnnualRaise = v => set("annualRaise", v);
+  const softwareBudget = s.softwareBudget, setSoftwareBudget = v => set("softwareBudget", v);
+  const insuranceBudget = s.insuranceBudget, setInsuranceBudget = v => set("insuranceBudget", v);
+  const maintenanceBudget = s.maintenanceBudget, setMaintenanceBudget = v => set("maintenanceBudget", v);
+  const marketingBudget = s.marketingBudget, setMarketingBudget = v => set("marketingBudget", v);
+  const fbCostPerNight = s.fbCostPerNight, setFbCostPerNight = v => set("fbCostPerNight", v);
+
+  /* ─── DERIVED ─── */
+  const pPct = Math.max(0, +(1 - sPct - bPct).toFixed(2));
+  const blendMem = memWD * 5/7 + memWE * 2/7;
+  const blendDisc = discWD * 5/7 + discWE * 2/7;
+  const blendBB = bbWD * 5/7 + bbWE * 2/7;
+  const avgIntervention = Math.round((peptidePrice + nadPrice + ivPrice) / 3);
+
+  /* ═══ YEAR 1 CALCULATION ═══ */
+  const yr1 = useMemo(() => {
+    const rooms = 3, opDays = 360;
+    const totalAvail = rooms * opDays;
+    const paidNightsTotal = Math.round(totalAvail * yr1Occ);
+
+    // Membership recruitment (only enabled tiers)
+    const enabledTiers = [y1Starter, y1Base, y1Premium];
+    const enabledCount = enabledTiers.filter(Boolean).length;
+    let sNew = 0, bNew = 0, pNew = 0;
+    if (enabledCount > 0) {
+      const totalTarget = yr1Rec;
+      if (y1Starter && y1Base && y1Premium) {
+        sNew = Math.round(totalTarget * sPct);
+        bNew = Math.round(totalTarget * bPct);
+        pNew = totalTarget - sNew - bNew;
+      } else if (y1Starter && y1Base) {
+        const ratio = sPct / (sPct + bPct);
+        sNew = Math.round(totalTarget * ratio);
+        bNew = totalTarget - sNew;
+      } else if (y1Starter && y1Premium) {
+        const ratio = sPct / (sPct + pPct);
+        sNew = Math.round(totalTarget * ratio);
+        pNew = totalTarget - sNew;
+      } else if (y1Base && y1Premium) {
+        const ratio = bPct / (bPct + pPct);
+        bNew = Math.round(totalTarget * ratio);
+        pNew = totalTarget - bNew;
+      } else if (y1Starter) { sNew = totalTarget; }
+      else if (y1Base) { bNew = totalTarget; }
+      else if (y1Premium) { pNew = totalTarget; }
+    }
+    const totalNew = sNew + bNew + pNew;
+
+    // Comp nights from membership
+    const compNights = sNew * 1 + bNew * 2 + pNew * 4;
+
+    // Discovery nights
+    const discNights = discPerMonth * 12;
+
+    // Split paid nights
+    const memberPaidNights = Math.max(0, paidNightsTotal - discNights - compNights);
+
+    // Revenue: Membership
+    const joinRev = sNew * sJoin + bNew * bJoin + pNew * pJoin;
+    const annRev = sNew * sAnn + bNew * bAnn + pNew * pAnn;
+
+    // Revenue: Accommodation
+    const bbMemRev = memberPaidNights * blendBB;
+    const bbDiscRev = discNights * blendDisc;
+    const accomRev = bbMemRev + bbDiscRev;
+
+    // Revenue: Events
+    const paidTickets = Math.round(totalNew * plus1Pct * eventsPerYear);
+    const eventRev = paidTickets * plus1Price;
+
+    // Revenue: Interventions
+    const intMems = Math.round(totalNew * interventionPct);
+    const intRev = intMems * interventionsPerMem * avgIntervention;
+
+    // Revenue: Extra nights
+    const extraNightMems = Math.round(totalNew * extraNightPct);
+    const extraNightRev = extraNightMems * extraNightsPerMem * extraNightPrice;
+
+    // Revenue: Chef dinners
+    const dinnerCount = Math.round(totalNew * chefDinnerPct);
+    const dinnerRev = dinnerCount * chefDinner;
+
+    const extrasRev = intRev + extraNightRev + dinnerRev;
+    const totalRev = joinRev + annRev + accomRev + eventRev + extrasRev;
+
+    // Opex: Staff (No community manager in Year 1)
+    const coreStaff = gmSal + chefSal + groundSal;
+    // Locum costs — included membership visits + paid extras
+    const includedConsults = bNew * 1 + pNew * 2; // Base: 1 annual, Premium: 2
+    const extrasConsults = intMems; // Each intervention buyer needs ≥1 GP consult for Rx
+    const consultCount = includedConsults + extrasConsults;
+    const includedNurse = Math.round(bNew * 2 + pNew * 4); // Base: 6-monthly bloods, Premium: quarterly
+    const extrasNurse = intMems * interventionsPerMem; // Each session = 1 nurse callout
+    const nurseCalls = includedNurse + extrasNurse;
+    const locumCost = consultCount * gpRate + nurseCalls * nurseRate;
+    // F&B
+    const fbCost = 80000 + (paidNightsTotal + compNights) * fbCostPerNight;
+    // Overheads
+    const overhead = insuranceBudget * 0.6 + maintenanceBudget * 0.5 + marketingBudget + softwareBudget + 30000;
+    const totalOpex = coreStaff + locumCost + fbCost + overhead;
+    const ebitda = totalRev - totalOpex;
+
+    return {
+      sNew, bNew, pNew, totalNew, compNights, discNights, memberPaidNights,
+      paidNightsTotal, totalAvail,
+      joinRev, annRev, bbMemRev, bbDiscRev, accomRev, eventRev, paidTickets,
+      intRev, intMems, extraNightRev, extraNightMems, dinnerRev, dinnerCount, extrasRev, totalRev,
+      coreStaff, locumCost, consultCount, nurseCalls, fbCost, overhead, totalOpex, ebitda,
+      margin: totalRev > 0 ? ebitda / totalRev : 0,
+    };
+  }, [yr1Rec, sJoin, bJoin, pJoin, sAnn, bAnn, pAnn, sPct, bPct, pPct, yr1Occ, y1Starter, y1Base, y1Premium, blendBB, blendDisc, discPerMonth, plus1Pct, plus1Price, eventsPerYear, interventionPct, interventionsPerMem, avgIntervention, extraNightPct, extraNightsPerMem, extraNightPrice, chefDinnerPct, chefDinner, gmSal, chefSal, groundSal, gpRate, nurseRate, fbCostPerNight, insuranceBudget, maintenanceBudget, marketingBudget, softwareBudget]);
+
+  /* ═══ 5-YEAR MODEL (FY2029–FY2033) ═══ */
+  const fy = useMemo(() => {
+    const years = [];
+    let sM = yr1.sNew, bM = yr1.bNew, pM = yr1.pNew;
+    let total = sM + bM + pM;
+    const cabNights = numCabins * 360;
+
+    for (let i = 0; i < 5; i++) {
+      const yr = i + 2; // Year 2–6
+      const fyLabel = `FY${2028 + i + 1}`;
+      const occTarget = yr2Occ + (yr5Occ - yr2Occ) * (i / 4);
+      const raiseMulti = Math.pow(1 + annualRaise, i);
+
+      // ── Member dynamics ──
+      const openS = sM, openB = bM, openP = pM, openTotal = total;
+      // Upgrades
+      const upgSB = Math.round(sM * upSB);
+      const upgBP = Math.round(bM * upBP);
+      // Attrition (applied to post-upgrade counts)
+      const postUpgS = sM - upgSB;
+      const postUpgB = bM + upgSB - upgBP;
+      const postUpgP = pM + upgBP;
+      const leavS = Math.round(postUpgS * attrit);
+      const leavB = Math.round(postUpgB * attrit);
+      const leavP = Math.round(postUpgP * attrit);
+      const totalLeave = leavS + leavB + leavP;
+      // Net before new joins
+      const netS = postUpgS - leavS;
+      const netB = postUpgB - leavB;
+      const netP = postUpgP - leavP;
+      const netTotal = netS + netB + netP;
+      // Recruitment
+      const capacity = Math.max(0, maxMem - netTotal);
+      const target = Math.min(yrNRec, capacity);
+      const newS = Math.round(target * sPct);
+      const newB = Math.round(target * bPct);
+      const newP = Math.max(0, target - newS - newB);
+      // Closing
+      sM = netS + newS;
+      bM = netB + newB;
+      pM = netP + newP;
+      total = sM + bM + pM;
+
+      // ── Revenue: Membership ──
+      const joinRev = newS * sJoin + newB * bJoin + newP * pJoin;
+      const annRev = sM * sAnn + bM * bAnn + pM * pAnn;
+
+      // ── Revenue: Accommodation ──
+      const compNights = sM * 1 + bM * 2 + pM * 4;
+      const discNightsYr = discPerMonth * 12;
+      const remainAfterComp = Math.max(0, cabNights - compNights);
+      const paidTotal = Math.round(remainAfterComp * occTarget);
+      const discActual = Math.min(discNightsYr, paidTotal);
+      const memPaidNights = Math.max(0, paidTotal - discActual);
+      const accomRev = memPaidNights * blendMem + discActual * blendDisc;
+
+      // ── Revenue: Events ──
+      const paidTickets = Math.round(total * plus1Pct * eventsPerYear);
+      const eventRev = paidTickets * plus1Price + (i >= 1 ? 40000 : 20000);
+
+      // ── Revenue: Interventions ──
+      const intMems = Math.round(total * interventionPct);
+      const intRev = intMems * interventionsPerMem * avgIntervention;
+
+      // ── Revenue: Extra nights ──
+      const extraNightMems = Math.round(total * extraNightPct);
+      const extraNightRev = extraNightMems * extraNightsPerMem * extraNightPrice;
+
+      // ── Revenue: Chef dinners ──
+      const dinnerCount = Math.round(total * chefDinnerPct);
+      const dinnerRev = dinnerCount * chefDinner;
+
+      const extrasRev = intRev + extraNightRev + dinnerRev;
+      const farmRev = 10000 + i * 12000;
+      const totalRev = joinRev + annRev + accomRev + eventRev + extrasRev + farmRev;
+
+      // ── Opex ──
+      const addStaff = total > 300 ? 130000 : total > 200 ? 65000 : 0;
+      const coreStaff = (gmSal + chefSal + groundSal + cmSal) * raiseMulti + addStaff;
+      const includedConsults = bM * 1 + pM * 2;
+      const extrasConsults = intMems; // intervention buyers need GP Rx
+      const consultCount = includedConsults + extrasConsults;
+      const includedNurse = bM * 2 + pM * 4; // bloods
+      const extrasNurse = intMems * interventionsPerMem; // intervention sessions
+      const nurseCalls = includedNurse + extrasNurse;
+      const locumCost = consultCount * gpRate + nurseCalls * nurseRate;
+      const fbCost = 100000 + (paidTotal + compNights) * fbCostPerNight;
+      const overhead = insuranceBudget + maintenanceBudget + marketingBudget * (i < 2 ? 1 : 0.7) + softwareBudget + 25000 + total * 120;
+      const totalOpex = coreStaff + locumCost + fbCost + overhead;
+      const ebitda = totalRev - totalOpex;
+
+      years.push({
+        yr, fyLabel,
+        openS, openB, openP, openTotal,
+        upgSB, upgBP, leavS, leavB, leavP, totalLeave,
+        newS, newB, newP, totalNew: newS + newB + newP,
+        sM, bM, pM, total,
+        joinRev, annRev, accomRev, eventRev, extrasRev, farmRev, intRev, extraNightRev, dinnerRev, totalRev,
+        coreStaff, locumCost, fbCost, overhead, totalOpex, ebitda,
+        margin: totalRev > 0 ? ebitda / totalRev : 0,
+        compNights, paidTotal, discActual, memPaidNights, occTarget,
+        paidTickets, intMems, extraNightMems: extraNightMems, dinnerCount, consultCount, nurseCalls,
+      });
+    }
+    return years;
+  }, [yr1, numCabins, maxMem, yrNRec, sPct, bPct, attrit, upSB, upBP, sJoin, bJoin, pJoin, sAnn, bAnn, pAnn, yr2Occ, yr5Occ, annualRaise, blendMem, blendDisc, discPerMonth, plus1Pct, plus1Price, eventsPerYear, interventionPct, interventionsPerMem, avgIntervention, extraNightPct, extraNightsPerMem, extraNightPrice, chefDinnerPct, chefDinner, gpRate, nurseRate, gmSal, chefSal, groundSal, cmSal, fbCostPerNight, insuranceBudget, maintenanceBudget, marketingBudget, softwareBudget]);
+
+  /* ─── CAPEX ─── */
+  const capex = {
+    property: 4508750,
+    cabins: numCabins * cabinCost,
+    clubhouse: 650000,
+    wellness: 235000,
+    farm: 400000,
+    preOpen: 600000,
+  };
+  const capexSub = Object.values(capex).reduce((a, b) => a + b, 0);
+  const contingency = Math.round(capexSub * 0.1);
+  const totalCapex = capexSub + contingency;
+
+  /* ─── GRAND TOTALS ─── */
+  const sixYrRev = yr1.totalRev + fy.reduce((s, y) => s + y.totalRev, 0);
+  const sixYrEbitda = yr1.ebitda + fy.reduce((s, y) => s + y.ebitda, 0);
+  const finalMem = fy.length > 0 ? fy[fy.length - 1].total : yr1.totalNew;
+
+  const pgNames = ["Assumptions", "Year 1 · Jul 2027–Jun 2028", "5-Year · Jul 2028–Jun 2033"];
+
+  if (!loaded) {
+    return (
+      <div style={{ fontFamily: "'Helvetica Neue',Helvetica,Arial,sans-serif", background: C.cream, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ textAlign: "center" }}>
+          <p style={{ fontFamily: "Georgia,serif", fontSize: 32, color: C.charcoal, letterSpacing: "0.08em", marginBottom: 8 }}>ALUM</p>
+          <p style={{ fontSize: 10, letterSpacing: "0.3em", textTransform: "uppercase", color: C.brass }}>Loading saved assumptions…</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ fontFamily: "'Helvetica Neue',Helvetica,Arial,sans-serif", background: C.cream, minHeight: "100vh", color: C.charcoal }}>
+
+      {/* ═══ HEADER ═══ */}
+      <div style={{ background: `linear-gradient(160deg,${C.charcoal},${C.deepEarth},${C.volcanic})`, padding: "24px 24px 14px", textAlign: "center" }}>
+        <h1 style={{ fontFamily: "Georgia,serif", fontSize: 32, color: C.cream, letterSpacing: "0.08em", fontWeight: 400, margin: "0 0 3px" }}>ALUM</h1>
+        <p style={{ fontSize: 9, letterSpacing: "0.35em", textTransform: "uppercase", color: C.brass, marginBottom: 14 }}>Financial Scenario Model · Confidential · Auto-saves</p>
+        <div style={{ display: "flex", gap: 6, justifyContent: "center", flexWrap: "wrap", alignItems: "center" }}>
+          {pgNames.map((p, i) => (
+            <button key={i} onClick={() => setPage(i)} style={{
+              padding: "7px 14px", fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase",
+              border: `1px solid ${page === i ? C.brass : "rgba(255,255,255,0.12)"}`,
+              background: page === i ? "rgba(184,149,106,0.18)" : "transparent",
+              color: page === i ? C.cream : C.stone, cursor: "pointer", borderRadius: 2, fontWeight: page === i ? 600 : 300,
+            }}>{p}</button>
+          ))}
+          <button onClick={resetAll} style={{
+            padding: "7px 14px", fontSize: 9, letterSpacing: "0.08em", textTransform: "uppercase",
+            border: `1px solid rgba(181,64,63,0.3)`, background: "transparent",
+            color: C.stone, cursor: "pointer", borderRadius: 2, fontWeight: 300, marginLeft: 8,
+          }}>Reset All</button>
+        </div>
+      </div>
+
+      {/* ═══ KPI STRIP ═══ */}
+      <div style={{ padding: "12px 20px 0" }}>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
+          <Stat label="Capex" value={f$(totalCapex)} sub={`${numCabins} cabins`} />
+          <Stat label="Yr 1 Revenue" value={f$(yr1.totalRev)} sub={`${yr1.totalNew} members · B&B`} />
+          <Stat label="Yr 1 EBITDA" value={f$(yr1.ebitda)} color={yr1.ebitda >= 0 ? C.euc : C.red} sub={fP(yr1.margin)} />
+          <Stat label="Final Yr EBITDA" value={f$(fy[4]?.ebitda || 0)} color={(fy[4]?.ebitda || 0) >= 0 ? C.euc : C.red} sub={fP(fy[4]?.margin || 0)} />
+          <Stat label="6-Year Total" value={f$(sixYrRev)} sub={`EBITDA: ${f$(sixYrEbitda)}`} color={sixYrEbitda >= 0 ? C.euc : C.red} />
+          <Stat label="Members (Final)" value={fN(finalMem)} sub={`of ${maxMem} cap`} />
+        </div>
+      </div>
+
+      <div style={{ padding: "0 20px 40px" }}>
+
+        {/* ══════════════════════════════════════════════════════════
+           PAGE 0: ASSUMPTIONS
+           ══════════════════════════════════════════════════════════ */}
+        {page === 0 && (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, alignItems: "start" }}>
+
+            {/* ─── COLUMN 1: MEMBERSHIP ─── */}
+            <div>
+              <Box>
+                <Hdr>Joining Fees</Hdr>
+                <Sl label="Starter" value={sJoin} onChange={setSJoin} min={1000} max={50000} step={1000} fmt="$" />
+                <Sl label="Base" value={bJoin} onChange={setBJoin} min={1000} max={50000} step={1000} fmt="$" />
+                <Sl label="Premium" value={pJoin} onChange={setPJoin} min={1000} max={50000} step={1000} fmt="$" />
+
+                <Hdr>Annual Fees</Hdr>
+                <Sl label="Starter" value={sAnn} onChange={setSAnn} min={1000} max={15000} step={500} fmt="$" />
+                <Sl label="Base" value={bAnn} onChange={setBAnn} min={2000} max={25000} step={500} fmt="$" />
+                <Sl label="Premium" value={pAnn} onChange={setPAnn} min={5000} max={40000} step={500} fmt="$" />
+
+                <Hdr>Recruitment & Cap</Hdr>
+                <Sl label="Maximum Members" value={maxMem} onChange={setMaxMem} min={100} max={500} step={25} />
+                <Sl label="Year 1 Recruitment" value={yr1Rec} onChange={setYr1Rec} min={10} max={100} step={5} sfx=" members" />
+                <Sl label="Ongoing Recruitment / yr" value={yrNRec} onChange={setYrNRec} min={20} max={150} step={5} sfx="/yr" />
+
+                <Hdr>Cohort Dynamics</Hdr>
+                <Sl label="Attrition (true churn)" value={attrit} onChange={setAttrit} min={0.02} max={0.15} step={0.01} fmt="%" desc="Members who leave entirely" />
+                <Sl label="Starter → Base Upgrade" value={upSB} onChange={setUpSB} min={0} max={0.25} step={0.01} fmt="%" desc="% of Starters upgrading per year (not attrition)" />
+                <Sl label="Base → Premium Upgrade" value={upBP} onChange={setUpBP} min={0} max={0.20} step={0.01} fmt="%" desc="% of Base upgrading per year (not attrition)" />
+
+                <Hdr>Tier Mix (New Joiners)</Hdr>
+                <Sl label="% Starter" value={sPct} onChange={v => { setSPct(v); if (v + bPct > 0.95) setBPct(+(0.95 - v).toFixed(2)); }} min={0.10} max={0.70} step={0.05} fmt="%" />
+                <Sl label="% Base" value={bPct} onChange={v => { setBPct(v); if (sPct + v > 0.95) setSPct(+(0.95 - v).toFixed(2)); }} min={0.10} max={0.70} step={0.05} fmt="%" />
+                <p style={{ fontSize: 10, color: C.warmGray, margin: "0 0 8px" }}>Premium: {fP(pPct)} (remainder)</p>
+
+                <Hdr>Year 1 — Tier Availability</Hdr>
+                <Toggle label="Starter" value={y1Starter} onChange={setY1Starter} desc="Toggle on/off for Year 1 model" />
+                <Toggle label="Base" value={y1Base} onChange={setY1Base} desc="Toggle on/off for Year 1 model" />
+                <Toggle label="Premium" value={y1Premium} onChange={setY1Premium} desc="Toggle on/off for Year 1 model" />
+              </Box>
+            </div>
+
+            {/* ─── COLUMN 2: ACCOMMODATION ─── */}
+            <div>
+              <Box>
+                <Hdr>Cabin Infrastructure (Year 2+)</Hdr>
+                <Sl label="Number of Cabins" value={numCabins} onChange={setNumCabins} min={5} max={15} step={1} sfx=" cabins" />
+                <Sl label="Build Cost per Cabin" value={cabinCost} onChange={setCabinCost} min={300000} max={650000} step={25000} fmt="$" />
+
+                <Hdr>Member Night Rates</Hdr>
+                <Sl label="Weekday (Mon–Fri)" value={memWD} onChange={setMemWD} min={250} max={1200} step={25} fmt="$" />
+                <Sl label="Weekend (Sat–Sun)" value={memWE} onChange={setMemWE} min={350} max={1500} step={25} fmt="$" />
+                <p style={{ fontSize: 9.5, color: C.warmGray, margin: "0 0 12px" }}>Blended avg: {f$(blendMem)}/night</p>
+
+                <Hdr>Discovery Night Rates (Vetted Public)</Hdr>
+                <Sl label="Weekday" value={discWD} onChange={setDiscWD} min={400} max={1800} step={25} fmt="$" />
+                <Sl label="Weekend" value={discWE} onChange={setDiscWE} min={500} max={2200} step={25} fmt="$" />
+                <Sl label="Discovery Nights / Month" value={discPerMonth} onChange={setDiscPerMonth} min={0} max={20} step={1} sfx="/mo" desc="Capped availability for non-member bookings" />
+                <p style={{ fontSize: 9.5, color: C.warmGray, margin: "0 0 12px" }}>Blended avg: {f$(blendDisc)}/night · {discPerMonth * 12} nights/year</p>
+
+                <Hdr>B&B Rates — Year 1 (Main House, 3 Rooms)</Hdr>
+                <Sl label="Weekday" value={bbWD} onChange={setBbWD} min={200} max={1000} step={25} fmt="$" />
+                <Sl label="Weekend" value={bbWE} onChange={setBbWE} min={300} max={1200} step={25} fmt="$" />
+                <p style={{ fontSize: 9.5, color: C.warmGray, margin: "0 0 12px" }}>Blended avg: {f$(blendBB)}/night</p>
+
+                <Hdr>Occupancy Targets</Hdr>
+                <Sl label="Year 1 (B&B)" value={yr1Occ} onChange={setYr1Occ} min={0.10} max={0.70} step={0.05} fmt="%" />
+                <Sl label="Year 2 (Cabin Launch)" value={yr2Occ} onChange={setYr2Occ} min={0.15} max={0.65} step={0.05} fmt="%" />
+                <Sl label="Year 6 Target" value={yr5Occ} onChange={setYr5Occ} min={0.30} max={0.85} step={0.05} fmt="%" />
+              </Box>
+            </div>
+
+            {/* ─── COLUMN 3: EXTRAS, STAFF, OVERHEADS ─── */}
+            <div>
+              <Box>
+                <Hdr>Extra Accommodation</Hdr>
+                <Sl label="Extra Night Price" value={extraNightPrice} onChange={setExtraNightPrice} min={300} max={1500} step={50} fmt="$" desc="Member rate for additional nights beyond allocation" />
+                <Sl label="% Members Buying Extra Nights" value={extraNightPct} onChange={setExtraNightPct} min={0.05} max={0.60} step={0.05} fmt="%" />
+                <Sl label="Extra Nights per Buyer" value={extraNightsPerMem} onChange={setExtraNightsPerMem} min={1} max={8} step={1} sfx=" nights" />
+
+                <Hdr>Events & +1 Reservations</Hdr>
+                <Sl label="Event Ticket Price" value={eventTicket} onChange={setEventTicket} min={50} max={500} step={25} fmt="$" desc="Per-ticket for curated ALUM programming" />
+                <Sl label="Events per Year" value={eventsPerYear} onChange={setEventsPerYear} min={6} max={24} step={1} sfx="/yr" />
+                <Sl label="+1 Reserved Ticket Price" value={plus1Price} onChange={setPlus1Price} min={30} max={300} step={10} fmt="$" desc="Paid reserve for member's guest at monthly events" />
+                <Sl label="% Members Buying +1" value={plus1Pct} onChange={setPlus1Pct} min={0.05} max={0.60} step={0.05} fmt="%" />
+
+                <Hdr>Longevity Interventions</Hdr>
+                <Sl label="Peptide Session" value={peptidePrice} onChange={setPeptidePrice} min={200} max={1500} step={50} fmt="$" />
+                <Sl label="NAD+ Infusion" value={nadPrice} onChange={setNadPrice} min={300} max={2000} step={50} fmt="$" />
+                <Sl label="IV Therapy" value={ivPrice} onChange={setIvPrice} min={150} max={1000} step={50} fmt="$" />
+                <Sl label="% Members Purchasing" value={interventionPct} onChange={setInterventionPct} min={0.05} max={0.50} step={0.05} fmt="%" />
+                <Sl label="Sessions per Buyer / Year" value={interventionsPerMem} onChange={setInterventionsPerMem} min={1} max={8} step={1} sfx="x" />
+                <p style={{ fontSize: 9.5, color: C.warmGray, margin: "-4px 0 8px" }}>Avg intervention price: {f$(avgIntervention)}</p>
+
+                <Hdr>Private Chef Dinners</Hdr>
+                <Sl label="Dinner Price (up to 10 pax)" value={chefDinner} onChange={setChefDinner} min={1000} max={8000} step={250} fmt="$" />
+                <Sl label="% Members Booking / Year" value={chefDinnerPct} onChange={setChefDinnerPct} min={0.02} max={0.30} step={0.01} fmt="%" />
+
+                <Hdr>Staffing Costs</Hdr>
+                <Sl label="General Manager" value={gmSal} onChange={setGmSal} min={150000} max={280000} step={10000} fmt="$" />
+                <Sl label="Chef" value={chefSal} onChange={setChefSal} min={80000} max={160000} step={5000} fmt="$" />
+                <Sl label="Groundsman" value={groundSal} onChange={setGroundSal} min={60000} max={120000} step={5000} fmt="$" desc="+free bungalow + provisions" />
+                <Sl label="Community Manager (Yr 2+)" value={cmSal} onChange={setCmSal} min={80000} max={180000} step={5000} fmt="$" />
+                <Sl label="GP Consult Rate" value={gpRate} onChange={setGpRate} min={100} max={400} step={25} fmt="$" sfx="/30min" />
+                <Sl label="Nurse Callout" value={nurseRate} onChange={setNurseRate} min={80} max={300} step={10} fmt="$" sfx="/visit" />
+                <Sl label="Annual Staff Raise" value={annualRaise} onChange={setAnnualRaise} min={0.02} max={0.08} step={0.01} fmt="%" />
+
+                <Hdr>Overheads</Hdr>
+                <Sl label="Insurance" value={insuranceBudget} onChange={setInsuranceBudget} min={30000} max={120000} step={5000} fmt="$" />
+                <Sl label="Maintenance" value={maintenanceBudget} onChange={setMaintenanceBudget} min={40000} max={150000} step={5000} fmt="$" />
+                <Sl label="Marketing" value={marketingBudget} onChange={setMarketingBudget} min={30000} max={200000} step={10000} fmt="$" />
+                <Sl label="F&B Cost / Night" value={fbCostPerNight} onChange={setFbCostPerNight} min={30} max={120} step={5} fmt="$" desc="Variable food cost per occupied night" />
+                <Sl label="Software & Subscriptions" value={softwareBudget} onChange={setSoftwareBudget} min={1000} max={25000} step={1000} fmt="$" />
+              </Box>
+            </div>
+          </div>
+        )}
+
+        {/* ══════════════════════════════════════════════════════════
+           PAGE 1: YEAR 1
+           ══════════════════════════════════════════════════════════ */}
+        {page === 1 && (
+          <div style={{ maxWidth: 880, margin: "0 auto" }}>
+            <Box>
+              <SecTitle sub={`Staged launch — 3 bedrooms, main house. No Community Manager. Tiers: ${[y1Starter && "Starter", y1Base && "Base", y1Premium && "Premium"].filter(Boolean).join(", ") || "None enabled"}`}>
+                Year 1: July 2027 – June 2028
+              </SecTitle>
+
+              <Hdr>Membership Intake</Hdr>
+              <Row cells={["", "Starter", "Base", "Premium", "Total"]} header />
+              <Row cells={["New Members", yr1.sNew, yr1.bNew, yr1.pNew, yr1.totalNew]} />
+              <Row cells={["Joining Revenue", f$(yr1.sNew * sJoin), f$(yr1.bNew * bJoin), f$(yr1.pNew * pJoin), f$(yr1.joinRev)]} />
+              <Row cells={["Annual Fee Revenue", f$(yr1.sNew * sAnn), f$(yr1.bNew * bAnn), f$(yr1.pNew * pAnn), f$(yr1.annRev)]} border />
+
+              <Hdr>Revenue</Hdr>
+              <Row cells={["Membership Joining Fees", f$(yr1.joinRev)]} />
+              <Row cells={["Membership Annual Fees", f$(yr1.annRev)]} />
+              <Row cells={["B&B — Member Nights", f$(yr1.bbMemRev)]} indent />
+              <Row cells={["B&B — Discovery Nights", f$(yr1.bbDiscRev)]} indent />
+              <Row cells={["Accommodation Total", f$(yr1.accomRev)]} />
+              <Row cells={["+1 Event Reservations", f$(yr1.eventRev)]} />
+              <Row cells={["Longevity Interventions", f$(yr1.intRev)]} indent />
+              <Row cells={["Extra Night Stays", f$(yr1.extraNightRev)]} indent />
+              <Row cells={["Private Chef Dinners", f$(yr1.dinnerRev)]} indent />
+              <Row cells={["Paid Extras Total", f$(yr1.extrasRev)]} />
+              <Row cells={["TOTAL REVENUE", f$(yr1.totalRev)]} bold accent border />
+
+              <Hdr>Operating Expenditure</Hdr>
+              <Row cells={["Core Staff (GM + Chef + Groundsman)", f$(yr1.coreStaff)]} />
+              <Row cells={["Locum (GP × " + yr1.consultCount + " + Nurse × " + yr1.nurseCalls + ")", f$(yr1.locumCost)]} />
+              <Row cells={["Food & Beverage", f$(yr1.fbCost)]} />
+              <Row cells={["Overheads (insurance, maint, mktg, software, misc)", f$(yr1.overhead)]} />
+              <Row cells={["TOTAL OPEX", f$(yr1.totalOpex)]} bold accent border />
+
+              <div style={{ height: 6 }} />
+              <Row cells={["EBITDA", f$(yr1.ebitda)]} bold />
+              <Row cells={["Margin", fP(yr1.margin)]} />
+
+              <Hdr>Accommodation Metrics</Hdr>
+              <Row cells={["Total B&B Nights Available", fN(yr1.totalAvail)]} />
+              <Row cells={["Comp Member Nights Used", fN(yr1.compNights)]} />
+              <Row cells={["Discovery Nights", fN(yr1.discNights)]} />
+              <Row cells={["Paid Member Nights", fN(yr1.memberPaidNights)]} />
+              <Row cells={["Occupancy (paid + comp + discovery)", fP(yr1.paidNightsTotal > 0 ? (yr1.paidNightsTotal + yr1.compNights) / yr1.totalAvail : 0)]} />
+
+              <Hdr>Activity Metrics</Hdr>
+              <Row cells={["+1 Tickets Sold", fN(yr1.paidTickets)]} />
+              <Row cells={["Intervention Buyers", `${yr1.intMems} members × ${interventionsPerMem}x`]} />
+              <Row cells={["Extra Night Buyers", `${yr1.extraNightMems} members × ${extraNightsPerMem} nights`]} />
+              <Row cells={["Chef Dinners Booked", fN(yr1.dinnerCount)]} />
+              <Row cells={["GP Consultations", fN(yr1.consultCount)]} />
+              <Row cells={["Nurse Callouts", fN(yr1.nurseCalls)]} />
+            </Box>
+          </div>
+        )}
+
+        {/* ══════════════════════════════════════════════════════════
+           PAGE 2: 5-YEAR MODEL
+           ══════════════════════════════════════════════════════════ */}
+        {page === 2 && (
+          <div>
+            <Box>
+              <SecTitle sub={`Full operations — ${numCabins} cabins, all tiers, complete team. Upgrades and attrition modelled per cohort.`}>
+                5-Year Model: July 2028 – June 2033
+              </SecTitle>
+
+              <Hdr>Member Dynamics</Hdr>
+              <Row cells={["", ...fy.map(y => y.fyLabel)]} header />
+              <Row cells={["Opening Members", ...fy.map(y => y.openTotal)]} />
+              <Row cells={["  Starter → Base Upgrades", ...fy.map(y => `+${y.upgSB}`)]} indent />
+              <Row cells={["  Base → Premium Upgrades", ...fy.map(y => `+${y.upgBP}`)]} indent />
+              <Row cells={["  Attrition (true churn)", ...fy.map(y => `−${y.totalLeave}`)]} indent />
+              <Row cells={["+ New Joiners", ...fy.map(y => y.totalNew)]} />
+              <Row cells={["Closing Members", ...fy.map(y => y.total)]} bold border />
+              <Row cells={["  Starter", ...fy.map(y => y.sM)]} indent />
+              <Row cells={["  Base", ...fy.map(y => y.bM)]} indent />
+              <Row cells={["  Premium", ...fy.map(y => y.pM)]} indent />
+
+              <Hdr>Revenue</Hdr>
+              <Row cells={["", ...fy.map(y => y.fyLabel)]} header />
+              <Row cells={["Joining Fees", ...fy.map(y => f$(y.joinRev))]} />
+              <Row cells={["Annual Membership Fees", ...fy.map(y => f$(y.annRev))]} />
+              <Row cells={["Accommodation (member + discovery)", ...fy.map(y => f$(y.accomRev))]} />
+              <Row cells={["Events & +1 Reservations", ...fy.map(y => f$(y.eventRev))]} />
+              <Row cells={["  Interventions", ...fy.map(y => f$(y.intRev))]} indent />
+              <Row cells={["  Extra Nights", ...fy.map(y => f$(y.extraNightRev))]} indent />
+              <Row cells={["  Chef Dinners", ...fy.map(y => f$(y.dinnerRev))]} indent />
+              <Row cells={["Paid Extras Total", ...fy.map(y => f$(y.extrasRev))]} />
+              <Row cells={["Farm & Produce", ...fy.map(y => f$(y.farmRev))]} />
+              <Row cells={["TOTAL REVENUE", ...fy.map(y => f$(y.totalRev))]} bold accent border />
+
+              <Hdr>Expenditure</Hdr>
+              <Row cells={["", ...fy.map(y => y.fyLabel)]} header />
+              <Row cells={["Core Staff", ...fy.map(y => f$(y.coreStaff))]} />
+              <Row cells={["Locum (GP + Nurse)", ...fy.map(y => f$(y.locumCost))]} />
+              <Row cells={["Food & Beverage", ...fy.map(y => f$(y.fbCost))]} />
+              <Row cells={["Overheads", ...fy.map(y => f$(y.overhead))]} />
+              <Row cells={["TOTAL OPEX", ...fy.map(y => f$(y.totalOpex))]} bold accent border />
+
+              <div style={{ height: 6 }} />
+              <Row cells={["EBITDA", ...fy.map(y => f$(y.ebitda))]} bold />
+              <Row cells={["Margin", ...fy.map(y => fP(y.margin))]} />
+            </Box>
+
+            <Box>
+              <Hdr>Accommodation Metrics</Hdr>
+              <Row cells={["", ...fy.map(y => y.fyLabel)]} header />
+              <Row cells={["Cabin Nights Available", ...fy.map(() => fN(numCabins * 360))]} />
+              <Row cells={["Comp Member Nights", ...fy.map(y => fN(y.compNights))]} />
+              <Row cells={["Discovery Nights", ...fy.map(y => fN(y.discActual))]} />
+              <Row cells={["Paid Member Nights", ...fy.map(y => fN(y.memPaidNights))]} />
+              <Row cells={["Total Occupied", ...fy.map(y => fN(y.compNights + y.paidTotal))]} />
+              <Row cells={["Occupancy (paid)", ...fy.map(y => fP(y.occTarget))]} />
+            </Box>
+
+            <Box>
+              <Hdr>Activity Metrics</Hdr>
+              <Row cells={["", ...fy.map(y => y.fyLabel)]} header />
+              <Row cells={["+1 Tickets Sold", ...fy.map(y => fN(y.paidTickets))]} />
+              <Row cells={["Intervention Buyers", ...fy.map(y => fN(y.intMems))]} />
+              <Row cells={["Extra Night Buyers", ...fy.map(y => fN(y.extraNightMems))]} />
+              <Row cells={["Chef Dinners", ...fy.map(y => fN(y.dinnerCount))]} />
+              <Row cells={["GP Consultations", ...fy.map(y => fN(y.consultCount))]} />
+              <Row cells={["Nurse Callouts", ...fy.map(y => fN(y.nurseCalls))]} />
+            </Box>
+
+            <Box>
+              <Hdr>Capital Expenditure</Hdr>
+              <Row cells={["Property acquisition", f$(capex.property)]} />
+              <Row cells={[`${numCabins} passive home eco cabins`, f$(capex.cabins)]} />
+              <Row cells={["Clubhouse renovation", f$(capex.clubhouse)]} />
+              <Row cells={["Wellness infrastructure (in-room model)", f$(capex.wellness)]} />
+              <Row cells={["Estate & Farm", f$(capex.farm)]} />
+              <Row cells={["Pre-opening costs", f$(capex.preOpen)]} />
+              <Row cells={["Contingency (10%)", f$(contingency)]} />
+              <Row cells={["TOTAL CAPEX", f$(totalCapex)]} bold accent border />
+            </Box>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<ALUMModel />);
+</script>
+</body>
+</html>
